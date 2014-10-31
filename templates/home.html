@@ -1,0 +1,10 @@
+
+<div class="form">
+  <input ng-model="url" placeholder="Url">
+  <input ng-model="project" placeholder="project">
+  <select ng-model="deviceSelected" ng-options="device for device in devices">{{ device }}</select>
+  <button ng-click="screenshot()">Take picture</button>
+</div>
+<div class="render"><img width="100%" ng-src="{{ screenshotSrc }}">
+  <div class="path">{{ screenshotSrc }}</div>
+</div>
