@@ -24,8 +24,6 @@ binPath = phantomjs.path;
 angular.module('MyApp').controller('HomeCtrl', function($scope, Devices) {
   var replaceSpace;
   $scope.url = 'http://localhost:8100/#/tab/friends';
-  $scope.filename = 'screenshot.png';
-  $scope.project = 'localhost';
   $scope.screenshotSrc = 'none.png';
   $scope.devices = Devices;
   $scope.deviceSelected = Devices[0];
@@ -39,13 +37,18 @@ angular.module('MyApp').controller('HomeCtrl', function($scope, Devices) {
     return str2;
   };
   return $scope.screenshot = function() {
-    var screenshot;
-    console.log('capture en cours');
-    console.log('phamtomjs screenshot.js ' + $scope.url + ' ' + $scope.project + ' ' + $scope.filename);
-    screenshot = spawn(phantomjs.path, ['screenshot.js', $scope.url, $scope.project, $scope.url + $scope.filename, replaceSpace($scope.deviceSelected)]);
+    var device, extension, filename, project, regex, screenshot, script;
+    extension = 'png';
+    script = 'screenshot.js';
+    regex = /https?:\/\/([\w\.]+)[:0-9]*\/?(.*)/.exec($scope.url);
+    project = "" + regex[1];
+    device = $scope.deviceSelected.replace(/\s/g, '_');
+    filename = ("" + regex[2] + "." + extension).replace(RegExp("([^\\w|^\\." + extension + "]*)"), '').replace(/(\/)/g, '.').replace(RegExp("(^." + extension + "$)"), "index$1");
+    console.log("phantomjs " + script + " " + $scope.url + " " + project + " " + filename + " " + device);
+    screenshot = spawn(phantomjs.path, [script, $scope.url, project, filename, device]);
     screenshot.stdout.on('data', function(data) {
-      console.log('capture win', data);
-      $scope.screenshotSrc = 'screenshots/' + $scope.project + '/current/' + $scope.filename;
+      console.log('capture win', filename);
+      $scope.screenshotSrc = 'screenshots/' + project + '/current/' + filename;
       return $scope.$digest();
     });
     return screenshot.stderr.on('data', function(data) {
