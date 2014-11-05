@@ -1,26 +1,67 @@
 fs      = require 'fs'
 PNG     = require('pngjs').PNG
 
-count = 0   # Count of pixel not match
-percent = 0 # Equality images percentage 
+# Color bit decomposition
+extractRGBA = (color) ->
+  color = parseInt color
+  rgba =
+    r: (color >>> 16) & 0xFF
+    g: (color >>>  8) & 0xFF
+    b: (color >>>  0) & 0xFF
+    a: (color >>> 24) & 0xFF
 
-rgb = 0xFFFF0000
+fillPixel = (img, pixel, color) ->
+  img[pixel]   = color.r
+  img[pixel+1] = color.g
+  img[pixel+2] = color.b
+  img[pixel+3] = color.a
 
-color =
-  a: (rgb >>> 24) & 0xFF
-  r: (rgb >>> 16) & 0xFF
-  g: (rgb >>>  8) & 0xFF
-  b: (rgb >>>  0) & 0xFF
+# COMMAND LINE
+# imageDiff.coffee <path/expectedImg> <path/currentImg>
 
-console.log process.argv
-expectedImg = './image1.png' 
-currentImg = './image2.png'
+# ARGUMENTS
+# --fgcolor <int:color>
+# --output <path/output.png>
+# --tolerance
+# --writeNbPixelDiff
+# --writeTimeExecution
+# --writeEqualityPercent
+# --bgcolor <int:color>
+
+# Img file
+expectedImg = process.argv[2]
+currentImg = process.argv[3]
 outputImg = './diff.png'
-tolerance = 10 / 100 * 255
 
-t = new Date().getTime()
+# Tolerance pixel color
+tolerance = 0
 
+fgColor = extractRGBA 0xFFFF0000
+bgColor = undefined
 
+# Output write options
+writeNbPixelDiff = false
+writeTimeExecution = false
+writeEqualityPercent = false
+
+for option, id in process.argv
+  switch option
+    when '--fgcolor'              then fgColor = extractRGBA process.argv[id + 1]
+    when '--bgcolor'              then bgColor = extractRGBA process.argv[id + 1]
+    when '--tolerance'            then tolerance = ~~(process.argv[id + 1] / 100 * 255)
+    when '--output'               then outputImg = process.argv[id + 1]
+    when '--writeNbPixelDiff'     then writeNbPixelDiff = true
+    when '--writeTimeExecution'   then writeTimeExecution = true
+    when '--writeEqualityPercent' then writeEqualityPercent = true
+
+    else continue
+
+count = 0   # Count of pixel not match
+percent = 0 # Equality images percentage
+
+startTime = new Date().getTime()
+
+# Read Img
 fs.createReadStream(expectedImg)
 
 .pipe new PNG { filterType: 4 }
@@ -34,38 +75,44 @@ fs.createReadStream(expectedImg)
 
   .on 'parsed', ->
     currentImg = this
-    o = new Date().getTime() - t
+    readFileTime = new Date().getTime() - startTime
     console.log -1 if (expectedImg.height isnt currentImg.height) or (expectedImg.width isnt currentImg.width)
 
+    # Compare pixel by pixel
     for y in [0..expectedImg.height]
       for x in [0..expectedImg.width]
-        pixelId = (expectedImg.width * y + x) << 2
+        pixel = (expectedImg.width * y + x) << 2
 
-        # if pixel color isnt tolerate pixel color become color
-        if  ~~(expectedImg.data[pixelId] - tolerance) < currentImg.data[pixelId] > ~~(expectedImg.data[pixelId] + tolerance) or
-            ~~(expectedImg.data[pixelId+1] - tolerance) < currentImg.data[pixelId+1] > ~~(expectedImg.data[pixelId+1] + tolerance) or
-            ~~(expectedImg.data[pixelId+2] - tolerance) < currentImg.data[pixelId+2] > ~~(expectedImg.data[pixelId+2] + tolerance)
+        # If pixel color is equal or similar (tolerance)
+        if  Math.abs(currentImg.data[pixel] - expectedImg.data[pixel]) <= tolerance and
+            Math.abs(currentImg.data[pixel + 1] - expectedImg.data[pixel + 1]) <= tolerance and
+            Math.abs(currentImg.data[pixel + 2] - expectedImg.data[pixel + 2]) <= tolerance and
+            Math.abs(currentImg.data[pixel + 3] - expectedImg.data[pixel + 3]) <= tolerance
 
-          # fill color
-          expectedImg.data[pixelId] = color.r
-          expectedImg.data[pixelId+1] = color.g
-          expectedImg.data[pixelId+2] = color.b
-          expectedImg.data[pixelId+3] = color.a
+          if bgColor isnt undefined then fillPixel expectedImg.data, pixel, bgColor
+          else expectedImg.data[pixel+3] = expectedImg.data[pixel+3] >> 1
+
+        else
+          fillPixel expectedImg.data, pixel, fgColor
           count++
 
-        else # Reduce opacity
-          expectedImg.data[pixelId+3] = expectedImg.data[pixelId+3] >> 1
-
-    # equality percent result
-    percent = 100 / (expectedImg.height * expectedImg.width) * count
-
+    # Write new Image Diff at outputImg
     expectedImg
     .pack()
     .pipe fs.createWriteStream outputImg
 
-    # Undist time execution control
-    u = new Date().getTime() - t
-    console.log "equality : #{~~(100 - percent)}%"
-    console.log "ouverture des fichiers : #{o}ms"
-    console.log "temps d' éxécution : #{u - o}ms"
-    console.log "total : #{u}ms"
+    # Number of pixel are different
+    if writeNbPixelDiff
+      console.log count
+
+    # Equality percent between img
+    if writeEqualityPercent
+      percent = ~~(100 - (100 / (expectedImg.height * expectedImg.width) * count))
+      console.log "equality : #{percent}%"
+
+    # Time execution control
+    if writeTimeExecution
+      endTime = new Date().getTime() - startTime
+      console.log "Read file time : #{readFileTime}ms"
+      console.log "Diff image time : #{endTime - readFileTime}ms"
+      console.log "Total : #{endTime}ms"
