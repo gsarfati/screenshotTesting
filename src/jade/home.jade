@@ -3,5 +3,12 @@
 	select(ng-model="deviceSelected", ng-options="device for device in devices") {{ device }}
 	button(ng-click="screenshot()") Take picture
 .render
-	img(width="100%", ng-src="{{ screenshotSrc }}")
+	img(
+		ng-if="!loader"
+		width="100%"
+		ng-src="{{ screenshotSrc }}"
+	)
+	img(
+		ng-if="loader"
+		src="./loader.gif")
 	.path {{ screenshotSrc }}

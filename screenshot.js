@@ -2296,13 +2296,12 @@ var device = {
 			"Release Date":"2013-10"
 		}
 }
-//var im			= require('imagemagick');
+
 var webPage = require('webpage');
 var system	= require('system');
 var fs			= require('fs');
 var page 		= webPage.create();
 
-//console.log(im.diff);
 devicename = system.args[4].replace(/_/g, " ");
 
 page.viewportSize = {
@@ -2331,21 +2330,11 @@ page.open(system.args[1], function() {
 	
 	if(fs.exists('screenshots/' + folder.project + '/' + folder.expected + '/' + filename)){
 		console.log(folder.project + '/' + folder.expected + '/' + filename + ' : already exist');
-		//console.log('screendiff');
 	}
 	else {
-		//console.log('screenref');
 		page.render('screenshots/'+ folder.project + '/' + folder.expected + '/' + filename);
 		console.log(folder.project + '/' + folder.expected + '/' + filename + ' : not exist');
 	}
-	
-
-
-	// else
-	// {
-	// 	console.log('screenref');
-	//   page.render('screenshots/' + system.args[1], + filename);
- //  }
 	phantom.exit();
 });
 

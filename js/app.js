@@ -23,6 +23,7 @@ binPath = phantomjs.path;
 
 angular.module('MyApp').controller('HomeCtrl', function($scope, Devices) {
   var replaceSpace;
+  $scope.loader = true;
   $scope.url = 'http://localhost:8100/#/tab/friends';
   $scope.screenshotSrc = 'none.png';
   $scope.devices = Devices;
@@ -38,6 +39,7 @@ angular.module('MyApp').controller('HomeCtrl', function($scope, Devices) {
   };
   return $scope.screenshot = function() {
     var device, extension, filename, project, regex, screenshot, script;
+    $scope.loader = true;
     extension = 'png';
     script = 'screenshot.js';
     regex = /https?:\/\/([\w\.]+)[:0-9]*\/?(.*)/.exec($scope.url);
@@ -49,6 +51,7 @@ angular.module('MyApp').controller('HomeCtrl', function($scope, Devices) {
     screenshot.stdout.on('data', function(data) {
       console.log('capture win', filename);
       $scope.screenshotSrc = 'screenshots/' + project + '/current/' + filename;
+      $scope.loader = false;
       return $scope.$digest();
     });
     return screenshot.stderr.on('data', function(data) {

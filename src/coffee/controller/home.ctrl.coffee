@@ -8,7 +8,7 @@ binPath       = phantomjs.path
 angular.module 'MyApp'
 
 .controller 'HomeCtrl', ($scope, Devices) ->
-
+  $scope.loader = true
   $scope.url = 'http://localhost:8100/#/tab/friends'
   $scope.screenshotSrc = 'none.png' 
   $scope.devices = Devices
@@ -20,6 +20,7 @@ angular.module 'MyApp'
      str2 += if letter is ' ' then '_' else letter
     str2
   $scope.screenshot =  ->
+    $scope.loader = true
     extension = 'png'
     script = 'screenshot.js'
     regex = ///https?:\/\/([\w\.]+)[:0-9]*\/?(.*)///.exec $scope.url
@@ -46,6 +47,7 @@ angular.module 'MyApp'
     screenshot.stdout.on 'data', (data) ->
       console.log 'capture win', filename
       $scope.screenshotSrc = 'screenshots/'+ project + '/current/' + filename
+      $scope.loader = false
       $scope.$digest()
       # swith data
       #   'screendiff' :

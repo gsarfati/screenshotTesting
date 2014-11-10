@@ -17,7 +17,7 @@ fillPixel = (img, pixel, color) ->
   img[pixel+3] = color.a
 
 # COMMAND LINE
-# imageDiff.coffee <path/expectedImg> <path/currentImg>
+# <path/expectedImg> <path/currentImg>
 
 # ARGUMENTS
 # --fgcolor <int:color>
@@ -62,57 +62,52 @@ percent = 0 # Equality images percentage
 startTime = new Date().getTime()
 
 # Read Img
-fs.createReadStream(expectedImg)
+expectedImg = new PNG().parse(fs.readFileSync(expectedImg))
+
+fs.createReadStream currentImg
 
 .pipe new PNG { filterType: 4 }
 
 .on 'parsed', ->
-  expectedImg = this
+  currentImg = this
+  readFileTime = new Date().getTime() - startTime
+  console.log -1 if (expectedImg.height isnt currentImg.height) or (expectedImg.width isnt currentImg.width)
 
-  fs.createReadStream currentImg
+  # Compare pixel by pixel
+  for y in [0..expectedImg.height]
+    for x in [0..expectedImg.width]
+      pixel = (expectedImg.width * y + x) << 2
 
-  .pipe new PNG { filterType: 4 }
+      # If pixel color is equal or similar (tolerance)
+      if  Math.abs(currentImg.data[pixel] - expectedImg.data[pixel]) <= tolerance and
+          Math.abs(currentImg.data[pixel + 1] - expectedImg.data[pixel + 1]) <= tolerance and
+          Math.abs(currentImg.data[pixel + 2] - expectedImg.data[pixel + 2]) <= tolerance and
+          Math.abs(currentImg.data[pixel + 3] - expectedImg.data[pixel + 3]) <= tolerance
 
-  .on 'parsed', ->
-    currentImg = this
-    readFileTime = new Date().getTime() - startTime
-    console.log -1 if (expectedImg.height isnt currentImg.height) or (expectedImg.width isnt currentImg.width)
+        if bgColor isnt undefined then fillPixel expectedImg.data, pixel, bgColor
+        else expectedImg.data[pixel+3] = expectedImg.data[pixel+3] >> 1
 
-    # Compare pixel by pixel
-    for y in [0..expectedImg.height]
-      for x in [0..expectedImg.width]
-        pixel = (expectedImg.width * y + x) << 2
+      else
+        fillPixel expectedImg.data, pixel, fgColor
+        count++
 
-        # If pixel color is equal or similar (tolerance)
-        if  Math.abs(currentImg.data[pixel] - expectedImg.data[pixel]) <= tolerance and
-            Math.abs(currentImg.data[pixel + 1] - expectedImg.data[pixel + 1]) <= tolerance and
-            Math.abs(currentImg.data[pixel + 2] - expectedImg.data[pixel + 2]) <= tolerance and
-            Math.abs(currentImg.data[pixel + 3] - expectedImg.data[pixel + 3]) <= tolerance
+  # Write new Image Diff at outputImg
+  expectedImg
+  .pack()
+  .pipe fs.createWriteStream outputImg
 
-          if bgColor isnt undefined then fillPixel expectedImg.data, pixel, bgColor
-          else expectedImg.data[pixel+3] = expectedImg.data[pixel+3] >> 1
+  # Number of pixel are different
+  if writeNbPixelDiff
+    console.log count
 
-        else
-          fillPixel expectedImg.data, pixel, fgColor
-          count++
+  # Equality percent between img
+  if writeEqualityPercent
+    percent = ~~(100 - (100 / (expectedImg.height * expectedImg.width) * count))
+    console.log "equality : #{percent}%"
 
-    # Write new Image Diff at outputImg
-    expectedImg
-    .pack()
-    .pipe fs.createWriteStream outputImg
-
-    # Number of pixel are different
-    if writeNbPixelDiff
-      console.log count
-
-    # Equality percent between img
-    if writeEqualityPercent
-      percent = ~~(100 - (100 / (expectedImg.height * expectedImg.width) * count))
-      console.log "equality : #{percent}%"
-
-    # Time execution control
-    if writeTimeExecution
-      endTime = new Date().getTime() - startTime
-      console.log "Read file time : #{readFileTime}ms"
-      console.log "Diff image time : #{endTime - readFileTime}ms"
-      console.log "Total : #{endTime}ms"
+  # Time execution control
+  if writeTimeExecution
+    endTime = new Date().getTime() - startTime
+    console.log "Read file time : #{readFileTime}ms"
+    console.log "Diff image time : #{endTime - readFileTime}ms"
+    console.log "Total : #{endTime}ms"
