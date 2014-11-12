@@ -29,3 +29,13 @@ body {
 	color:grey;
 	margin-top:50px;
 }
+.status {
+	padding:5px;
+	color:white;
+}
+.diff {
+	background:red;
+}
+.no-diff {
+	background:green;
+}

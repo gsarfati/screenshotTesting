@@ -1,8 +1,7 @@
-sh              = require 'shelljs'
-gulp            = require 'gulp'
-concat          = require 'gulp-concat'
-jade            = require 'gulp-jade'
-coffee          = require 'gulp-coffee'
+gulp            = require('gulp')
+concat          = require('gulp-concat')
+jade            = require('gulp-jade')
+coffee          = require('gulp-coffee')
 
 gulp.task 'coffee', (done) ->
   gulp.src  "./src/coffee/**/*.coffee"

@@ -4,16 +4,17 @@ childProcess  = require 'child_process'
 phantomjs     = require 'phantomjs'
 spawn         = childProcess.spawn
 binPath       = phantomjs.path
+gui = require('nw.gui')
 
 angular.module 'MyApp'
 
 .controller 'HomeCtrl', ($scope, Devices) ->
   $scope.loader = true
-  $scope.url = 'http://localhost:8100/#/tab/friends'
+  $scope.url = 'http://toto.com'
   $scope.screenshotSrc = 'none.png' 
   $scope.devices = Devices
   $scope.deviceSelected = Devices[0]
-
+  $scope.nbPixelDiff = 0
   replaceSpace = (str1) ->
     str2 = ''
     for letter, index in str1
@@ -46,11 +47,26 @@ angular.module 'MyApp'
 
     screenshot.stdout.on 'data', (data) ->
       console.log 'capture win', filename
-      $scope.screenshotSrc = 'screenshots/'+ project + '/current/' + filename
-      $scope.loader = false
-      $scope.$digest()
+      
+      diff = spawn 'coffee', [
+        "testpng.coffee"
+        "screenshots/#{project}/current/#{filename}"
+        "screenshots/#{project}/expected/#{filename}"
+        "screenshots/#{project}/diff/#{filename}"
+        "--writeNbPixelDiff"
+      ]
+
+      diff.stdout.on 'data', (data) ->
+        
+        $scope.nbPixelDiff = parseInt data
+        $scope.loader = false
+        $scope.screenshotSrc = 'data:image/png;base64,' +fs.readFileSync("screenshots/#{project}/diff/#{filename}").toString('base64')
+        console.log 'imgbase64'
+        $scope.$digest()
+
       # swith data
       #   'screendiff' :
+    
 
     screenshot.stderr.on 'data', (data) ->
       console.log 'capture fail', data

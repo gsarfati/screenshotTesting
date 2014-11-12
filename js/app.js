@@ -7,7 +7,7 @@ angular.module('MyApp', ['ui.router']).config(function($stateProvider, $urlRoute
   return $urlRouterProvider.otherwise("/home");
 }).run(function() {});
 
-var binPath, childProcess, fs, path, phantomjs, spawn;
+var binPath, childProcess, fs, gui, path, phantomjs, spawn;
 
 fs = require('fs');
 
@@ -21,13 +21,16 @@ spawn = childProcess.spawn;
 
 binPath = phantomjs.path;
 
+gui = require('nw.gui');
+
 angular.module('MyApp').controller('HomeCtrl', function($scope, Devices) {
   var replaceSpace;
   $scope.loader = true;
-  $scope.url = 'http://localhost:8100/#/tab/friends';
+  $scope.url = 'http://toto.com';
   $scope.screenshotSrc = 'none.png';
   $scope.devices = Devices;
   $scope.deviceSelected = Devices[0];
+  $scope.nbPixelDiff = 0;
   replaceSpace = function(str1) {
     var index, letter, str2, _i, _len;
     str2 = '';
@@ -49,10 +52,16 @@ angular.module('MyApp').controller('HomeCtrl', function($scope, Devices) {
     console.log("phantomjs " + script + " " + $scope.url + " " + project + " " + filename + " " + device);
     screenshot = spawn(phantomjs.path, [script, $scope.url, project, filename, device]);
     screenshot.stdout.on('data', function(data) {
+      var diff;
       console.log('capture win', filename);
-      $scope.screenshotSrc = 'screenshots/' + project + '/current/' + filename;
-      $scope.loader = false;
-      return $scope.$digest();
+      diff = spawn('coffee', ["testpng.coffee", "screenshots/" + project + "/current/" + filename, "screenshots/" + project + "/expected/" + filename, "screenshots/" + project + "/diff/" + filename, "--writeNbPixelDiff"]);
+      return diff.stdout.on('data', function(data) {
+        $scope.nbPixelDiff = parseInt(data);
+        $scope.loader = false;
+        $scope.screenshotSrc = 'data:image/png;base64,' + fs.readFileSync("screenshots/" + project + "/diff/" + filename).toString('base64');
+        console.log('imgbase64');
+        return $scope.$digest();
+      });
     });
     return screenshot.stderr.on('data', function(data) {
       return console.log('capture fail', data);

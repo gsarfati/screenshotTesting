@@ -31,7 +31,7 @@ fillPixel = (img, pixel, color) ->
 # Img file
 expectedImg = process.argv[2]
 currentImg = process.argv[3]
-outputImg = './diff.png'
+outputImg = process.argv[4]
 
 # Tolerance pixel color
 tolerance = 0
@@ -49,7 +49,6 @@ for option, id in process.argv
     when '--fgcolor'              then fgColor = extractRGBA process.argv[id + 1]
     when '--bgcolor'              then bgColor = extractRGBA process.argv[id + 1]
     when '--tolerance'            then tolerance = ~~(process.argv[id + 1] / 100 * 255)
-    when '--output'               then outputImg = process.argv[id + 1]
     when '--writeNbPixelDiff'     then writeNbPixelDiff = true
     when '--writeTimeExecution'   then writeTimeExecution = true
     when '--writeEqualityPercent' then writeEqualityPercent = true
@@ -64,39 +63,41 @@ startTime = new Date().getTime()
 # Read Img
 expectedImg = new PNG().parse(fs.readFileSync(expectedImg))
 
-fs.createReadStream currentImg
+fs.createReadStream(currentImg).pipe(new PNG { filterType: 4 })
 
-.pipe new PNG { filterType: 4 }
+  .on 'parsed', ->
+    currentImg = this
+    readFileTime = new Date().getTime() - startTime
+    console.log -1 if (expectedImg.height isnt currentImg.height) or (expectedImg.width isnt currentImg.width)
 
-.on 'parsed', ->
-  currentImg = this
-  readFileTime = new Date().getTime() - startTime
-  console.log -1 if (expectedImg.height isnt currentImg.height) or (expectedImg.width isnt currentImg.width)
+    # Compare pixel by pixel
+    for y in [0..expectedImg.height]
+      for x in [0..expectedImg.width]
+        pixel = (expectedImg.width * y + x) << 2
 
-  # Compare pixel by pixel
-  for y in [0..expectedImg.height]
-    for x in [0..expectedImg.width]
-      pixel = (expectedImg.width * y + x) << 2
+        # If pixel color is equal or similar (tolerance)
+        if  Math.abs(currentImg.data[pixel] - expectedImg.data[pixel]) <= tolerance and
+            Math.abs(currentImg.data[pixel + 1] - expectedImg.data[pixel + 1]) <= tolerance and
+            Math.abs(currentImg.data[pixel + 2] - expectedImg.data[pixel + 2]) <= tolerance and
+            Math.abs(currentImg.data[pixel + 3] - expectedImg.data[pixel + 3]) <= tolerance
 
-      # If pixel color is equal or similar (tolerance)
-      if  Math.abs(currentImg.data[pixel] - expectedImg.data[pixel]) <= tolerance and
-          Math.abs(currentImg.data[pixel + 1] - expectedImg.data[pixel + 1]) <= tolerance and
-          Math.abs(currentImg.data[pixel + 2] - expectedImg.data[pixel + 2]) <= tolerance and
-          Math.abs(currentImg.data[pixel + 3] - expectedImg.data[pixel + 3]) <= tolerance
+          if bgColor isnt undefined then fillPixel expectedImg.data, pixel, bgColor
+          else expectedImg.data[pixel+3] = expectedImg.data[pixel+3] >> 1
 
-        if bgColor isnt undefined then fillPixel expectedImg.data, pixel, bgColor
-        else expectedImg.data[pixel+3] = expectedImg.data[pixel+3] >> 1
+        else
+          fillPixel expectedImg.data, pixel, fgColor
+          count++
 
-      else
-        fillPixel expectedImg.data, pixel, fgColor
-        count++
+    # Write new Image Diff at outputImg
+    folder = outputImg.replace /// [\w]*.png$ ///, ''
+    unless fs.existsSync folder
+      fs.mkdirSync folder
 
-  # Write new Image Diff at outputImg
-  expectedImg
-  .pack()
-  .pipe fs.createWriteStream outputImg
+    expectedImg
+    .pack()
+    .pipe fs.createWriteStream outputImg
 
-  # Number of pixel are different
+    # Number of pixel are different
   if writeNbPixelDiff
     console.log count
 

@@ -4,6 +4,8 @@
   <select ng-model="deviceSelected" ng-options="device for device in devices">{{ device }}</select>
   <button ng-click="screenshot()">Take picture</button>
 </div>
-<div class="render"><img ng-if="!loader" width="100%" ng-src="{{ screenshotSrc }}"><img ng-if="loader" src="./loader.gif">
-  <div class="path">{{ screenshotSrc }}</div>
+<div class="render">
+  <div ng-if="nbPixelDiff == 0" class="status no-diff">equal</div>
+  <div ng-if="nbPixelDiff != 0" class="status diff">not equal</div><img ng-if="!loader" width="100%" src="{{ screenshotSrc }}"><img ng-if="loader" src="./loader.gif">
+  <div class="path">{{ nbPixelDiff }}</div>
 </div>

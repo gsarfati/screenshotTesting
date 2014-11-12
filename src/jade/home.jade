@@ -3,12 +3,18 @@
 	select(ng-model="deviceSelected", ng-options="device for device in devices") {{ device }}
 	button(ng-click="screenshot()") Take picture
 .render
+	.status.no-diff(
+		ng-if="nbPixelDiff == 0"
+	) equal
+	.status.diff(
+		ng-if="nbPixelDiff != 0"
+	) not equal
 	img(
 		ng-if="!loader"
 		width="100%"
-		ng-src="{{ screenshotSrc }}"
+		src="{{ screenshotSrc }}"
 	)
 	img(
 		ng-if="loader"
 		src="./loader.gif")
-	.path {{ screenshotSrc }}
+	.path {{ nbPixelDiff }}
